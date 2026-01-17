@@ -5,6 +5,13 @@ __pycache__/
 
 # C extensions
 *.so
+data
+research/youtube_exact_code.ipynb
+chainlit_app.py 
+chainlit.md 
+store  
+.chainlit 
+cache
 
 # Distribution / packaging
 .Python

@@ -1,0 +1,36 @@
+**Source:** Research Document | **Page:** N/A
+
+---
+
+**Preview:**
+2.2 Physics-informed neural network
+
+A neural network for a two-dimensional longitudinal section of the Pianello hillslope, 𝜓𝜃(𝑥,𝑦,𝑡), is constructed with four hidden layers, each containing 150 neuro...
+
+*👆 Click to view full content*
+
+---
+
+**Full Content:**
+
+2.2 Physics-informed neural network
+
+A neural network for a two-dimensional longitudinal section of the Pianello hillslope, 𝜓𝜃(𝑥,𝑦,𝑡), is constructed with four hidden layers, each containing 150 neurons and nonlinear activation functions. The loss function combines the following contributions (Raissi et al. 2019; Karniadakis et al. 2021; Cuomo et al. 2022):
+
+• Physics loss: penalizing deviations from the diffusion equation residuals,
+
+ℒ𝑃𝐷𝐸 = ||𝜕𝑡𝜓𝜃 − 𝐷 ∇2𝜓𝜃|| 2 , (3)
+
+• Initial and boundary conditions: enforcing observed or prescribed conditions at the slope surface, boundaries, and initial state
+
+Pomarico D., Lorusso G., Pantaleo E., Cilli R., Losacco N., Monaco A., Amoroso N., Bellantuono L., Esposito F., Del Buono N., Cotecchia F., Bellotti R. A Physics-Informed Approach to model soil-atmosphere interaction in slopes affected by slow-moving landslides.
+
+Proc. of the 3rd Workshop on the Future of Machine Learning in Geotechnics (3FOMLIG) Florence (Italy), October 15-17, 2025 – www.fomlig2025.com
+
+10 08 x 0.6 2 na a PINN Diffusion | Time: 0.83 120.00 2 gy Diffusion Coefficient: 0.005 4Layers, NEURONS: 150, Adam 100.00 0.2 80.00 — 100 € . € e 60.00 = 9° € > = 50 sci 40,00 % © J .-@ upper cell [36 ml aos S69 4 -@ lower cell [59 ml O 20.00 0 wo 200 300S- 400-Ss 500. s«60D—Ss— 700 o:00 a= ~— = a X (in m) : £ 8 2000 = 45 Sa 35 x0 tT a | $ $$ 2 g #8 8 f g¢ ¢§ § g§ s Ss z a 2 3 g gv a a a a Time
+
+Figure 1. PINN simulation of subsurface flow. Left: Spatial distribution of simulated piezometric head, with monitoring points C1 and C2 indicated. Top right: Temporal evolution of top boundary flux, highlighting the snapshot corresponding to the displayed field. Bottom right: Comparison of simulated and observed piezometric head at two monitoring depths (upper cell C1 at 36 m and lower cell C2 at 59 m), showing optimal matching between PINN predictions and field data.
+
+• Data mismatch: minimizing the difference between network predictions and piezometric head values at monitoring points.
+
+The present work focuses on the physics-constrained component of the PINN loss, while the data mismatch contribution is left aside at this stage. Training is performed using the Adam optimizer, iteratively reducing the composite loss.
