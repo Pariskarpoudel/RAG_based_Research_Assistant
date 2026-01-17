@@ -12,7 +12,7 @@ chainlit.md
 store  
 .chainlit 
 cache
-
+.files/
 # Distribution / packaging
 .Python
 build/
