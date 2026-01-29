@@ -6,9 +6,18 @@ import uvicorn
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 # using as a package
-from RAG_based_Research_Assistant.src.helper import (
+# from RAG_based_Research_Assistant.src.helper import (
+#     load_pinecone_index,
+#     retrieve_parent_docs_hybrid,
+#     embed_text_with_clip,
+#     load_multiple_parents_from_supabase,
+#     generate_final_answer_with_groq
+# )
+from src.helper import (
     load_pinecone_index,
     retrieve_parent_docs_hybrid,
     embed_text_with_clip,
@@ -39,6 +48,8 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods including OPTIONS
     allow_headers=["*"],
 )
+
+
 # input structure validation or query request structure validation through pydantic
 class QueryRequest(BaseModel):
     query: str
@@ -83,5 +94,9 @@ async def query(req: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
-    uvicorn.run("app_fastapi:app", host="0.0.0.0", port=8080, reload=True)
+FRONTEND_BUILD_PATH = Path(__file__).parent / "frontenddd" / "dist"
+# Mount the whole frontend build at "/"
+app.mount("/", StaticFiles(directory=FRONTEND_BUILD_PATH, html=True), name="frontend")
+
+# if __name__ == "__main__":
+#     uvicorn.run("app_fastapi:app", host="0.0.0.0", port=8080, reload=True)

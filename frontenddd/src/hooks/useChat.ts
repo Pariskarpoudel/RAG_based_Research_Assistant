@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Message, QueryResponse } from '@/types/chat';
 import { toast } from '@/hooks/use-toast';
 
-const API_URL = 'http://localhost:8080/query';
+const API_URL = '/query';
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
