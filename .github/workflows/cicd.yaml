@@ -8,6 +8,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # This section allows the 'deploy' job to see what was built here
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,13 +27,17 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag and push image to ECR
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
           IMAGE_TAG: latest
         run: |
+          # Build the image
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Push to AWS ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          # Save the image path as an output for the next job
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   deploy-to-ec2:
@@ -45,20 +52,23 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
+        id: login-ecr-deploy
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Deploy new container
         env:
-          IMAGE: $$   {{ steps.login-ecr.outputs.registry }}/   $${{ secrets.ECR_REPO }}:latest
+          # This variable now correctly holds the full ECR path
+          IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
-          # Stop & remove old container safely
+          # 1. Stop & remove old container safely
+          # The '|| true' ensures the script doesn't fail if the container doesn't exist
           docker stop rag-app || true
           docker rm rag-app || true
 
-          # Pull latest
+          # 2. Pull the latest image from ECR
           docker pull $IMAGE
 
-          # Run with all required env vars
+          # 3. Run the container with your Project Environment Variables
           docker run -d \
             --name rag-app \
             --restart unless-stopped \
@@ -70,3 +80,6 @@ jobs:
             -e SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}" \
             -e SUPABASE_PASSWORD="${{ secrets.SUPABASE_PASSWORD }}" \
             $IMAGE
+
+          # 4. Optional: Clean up unused dangling images to save EC2 disk space
+          docker image prune -f
