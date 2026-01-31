@@ -8,9 +8,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # This section allows the 'deploy' job to see what was built here
     outputs:
       image: ${{ steps.build-image.outputs.image }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,6 +21,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          mask-aws-account-id: 'no'
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -35,14 +36,19 @@ jobs:
         run: |
           # Build the image
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          
           # Push to AWS ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
           # Save the image path as an output for the next job
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          
+          echo "✅ Built and pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
   deploy-to-ec2:
     needs: build-and-push
     runs-on: self-hosted
+    
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -50,6 +56,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          mask-aws-account-id: 'no'
 
       - name: Login to Amazon ECR
         id: login-ecr-deploy
@@ -57,18 +64,24 @@ jobs:
 
       - name: Deploy new container
         env:
-          # This variable now correctly holds the full ECR path
           IMAGE: ${{ needs.build-and-push.outputs.image }}
         run: |
-          # 1. Stop & remove old container safely
-          # The '|| true' ensures the script doesn't fail if the container doesn't exist
-          docker stop rag-app || true
-          docker rm rag-app || true
-
-          # 2. Pull the latest image from ECR
+          echo "Deploying image: $IMAGE"
+          
+          # Validate IMAGE variable is set
+          if [ -z "$IMAGE" ]; then
+            echo "ERROR: IMAGE variable is empty!"
+            exit 1
+          fi
+          
+          # Stop & remove old container (ignore errors if it doesn't exist)
+          docker stop rag-app 2>/dev/null || true
+          docker rm rag-app 2>/dev/null || true
+          
+          # Pull the latest image from ECR
           docker pull $IMAGE
-
-          # 3. Run the container with your Project Environment Variables
+          
+          # Run the container with environment variables
           docker run -d \
             --name rag-app \
             --restart unless-stopped \
@@ -80,6 +93,22 @@ jobs:
             -e SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}" \
             -e SUPABASE_PASSWORD="${{ secrets.SUPABASE_PASSWORD }}" \
             $IMAGE
-
-          # 4. Optional: Clean up unused dangling images to save EC2 disk space
+          
+          # Wait for container to start
+          sleep 3
+          
+          # Verify the container is running
+          if docker ps | grep -q rag-app; then
+            echo "✅ Container is running successfully"
+            docker ps | grep rag-app
+          else
+            echo "❌ Container failed to start!"
+            echo "Container logs:"
+            docker logs rag-app 2>&1 || echo "No logs available"
+            exit 1
+          fi
+          
+          # Clean up unused dangling images to save EC2 disk space
           docker image prune -f
+          
+          echo "✅ Deployment completed successfully!"
